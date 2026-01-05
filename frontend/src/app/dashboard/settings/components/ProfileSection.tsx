@@ -211,9 +211,13 @@ export function ProfileSection() {
                 message: error.message,
                 response: error.response,
                 status: error.response?.status,
-                data: error.response?.data
+                data: error.response?.data,
+                userMessage: error.userMessage
             });
-            toast.error(error.response?.data?.message || "Failed to send OTP")
+
+            // Use the enhanced error message from API client
+            const errorMessage = error.userMessage || error.response?.data?.message || "Failed to send OTP";
+            toast.error(errorMessage)
         } finally {
             setIsSendingOtp(false)
         }

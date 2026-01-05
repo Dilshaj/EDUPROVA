@@ -9,7 +9,21 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(async (config) => {
     console.log('API Client: Intercepting request to', config.url);
-    if (typeof window !== 'undefined') {
+
+    // List of endpoints that don't require authentication
+    const publicEndpoints = [
+        '/otp/phone/send-otp',
+        '/auth/verify-pre-login',
+        '/auth/register',
+        '/auth/login',
+        '/auth/social-login',
+        '/auth/accept-invite'
+    ];
+
+    // Check if this is a public endpoint
+    const isPublicEndpoint = publicEndpoints.some(endpoint => config.url?.includes(endpoint));
+
+    if (typeof window !== 'undefined' && !isPublicEndpoint) {
         const session = await getSession();
         console.log('API Client: Session check', {
             hasSession: !!session,
@@ -19,6 +33,8 @@ apiClient.interceptors.request.use(async (config) => {
         if (session && (session as any).accessToken) {
             config.headers.Authorization = `Bearer ${(session as any).accessToken}`;
         }
+    } else if (isPublicEndpoint) {
+        console.log('API Client: Skipping auth for public endpoint:', config.url);
     }
     return config;
 }, (error) => {
@@ -28,28 +44,40 @@ apiClient.interceptors.request.use(async (config) => {
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Create a detailed error log object
+        const errorLog: any = {
+            timestamp: new Date().toISOString(),
+            message: error.message,
+        };
+
+        // Add config details if available
+        if (error.config) {
+            errorLog.url = error.config.url;
+            errorLog.method = error.config?.method?.toUpperCase();
+            errorLog.baseURL = error.config.baseURL || apiClient.defaults.baseURL;
+            errorLog.fullURL = `${error.config.baseURL || apiClient.defaults.baseURL}${error.config.url}`;
+        }
+
         // Check if it's a network error (backend not reachable)
         if (!error.response) {
-            console.error('API Client: Network Error - Backend not reachable', {
-                url: error.config?.url,
-                method: error.config?.method,
-                message: error.message,
-                code: error.code,
-                baseURL: apiClient.defaults.baseURL
-            });
+            errorLog.type = 'Network Error';
+            errorLog.code = error.code;
+            errorLog.description = 'Backend not reachable';
+
+            console.error('API Client: Network Error');
+            console.error(JSON.stringify(errorLog, null, 2));
 
             // Add a user-friendly error message
             error.userMessage = 'Unable to connect to the server. Please ensure the backend is running.';
         } else {
             // It's an HTTP error (4xx, 5xx)
-            console.error('API Client: HTTP Error', {
-                url: error.config?.url,
-                method: error.config?.method,
-                status: error.response.status,
-                statusText: error.response.statusText,
-                data: error.response.data,
-                headers: error.response.headers
-            });
+            errorLog.type = 'HTTP Error';
+            errorLog.status = error.response.status;
+            errorLog.statusText = error.response.statusText;
+            errorLog.responseData = error.response.data;
+
+            console.error('API Client: HTTP Error');
+            console.error(JSON.stringify(errorLog, null, 2));
 
             // Add specific error messages for common status codes
             if (error.response.status === 401) {

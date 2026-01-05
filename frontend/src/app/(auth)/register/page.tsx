@@ -70,7 +70,7 @@ const Signup: React.FC = () => {
         setLoadingOtp(true);
         setError("");
         try {
-            await apiClient.post('/otp/phone/send-otp', { phone });
+            await apiClient.post('/otp/phone/send-otp', { phoneNumber: phone });
             setIsOtpSent(true);
             setTimer(30);
             setSuccess("OTP sent successfully!");
@@ -90,7 +90,7 @@ const Signup: React.FC = () => {
         setVerifyingOtp(true);
         setError("");
         try {
-            const verifyRes = await apiClient.post('/auth/verify-pre-login', { phone, otp });
+            const verifyRes = await apiClient.post('/auth/verify-pre-login', { phoneNumber: phone, otp });
             if (verifyRes.data.success) {
                 setIsVerified(true);
                 setSuccess("Phone number verified successfully!");
