@@ -52,4 +52,9 @@ export class UsersController {
             throw error;
         }
     }
+
+    @Get('team-members')
+    async getTeamMembers() {
+        return this.usersService.getTeamMembers();
+    }
 }

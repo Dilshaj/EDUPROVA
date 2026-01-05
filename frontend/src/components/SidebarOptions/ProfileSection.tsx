@@ -79,17 +79,26 @@ const ProfileSection: React.FC<{ isCollapsed: boolean }> = ({ isCollapsed }) => 
 
     return (
         <Link href="/dashboard/profile" className="flex flex-col items-center mb-4 relative z-0 transition-all duration-300 group/profile cursor-pointer">
-            {isCollapsed && <div className="absolute w-40 h-18 -translate-y-[11px] z-0 rounded-full ml-28 p-7 bg-[#2d63a0] border-r-2 border-[#F2F8FF] shadow-sm shadow-slate-200/50">
+            {/* {isCollapsed && <div className="absolute w-40 h-18 -translate-y-[11px] z-0 rounded-full ml-28 p-7 bg-[#2d63a0] border-r-2 border-[#F2F8FF] shadow-sm shadow-slate-200/50">
                 <div className="relative w-full h-full z-10">
-                    <div className="absolute inset-0 bg-[#2d63a0] translate-y-[44px] z-0 ml-2"/>
+                    <div className="absolute inset-0 bg-[#2d63a0] translate-y-[44px] z-0 ml-2" />
                     <div className="absolute inset-0 p-[3px] translate-y-[45px] rotate-z-5 bg-[#F5F9FF] mr-16 rounded-tr-full" />
                 </div>
-            </div>}
+            </div>} */}
             <div className={`relative transition-all duration-500 ${isCollapsed ? 'w-12 h-12' : 'w-24 h-24'} mb-3`}>
-                {/* Premium Soft Border */}
-                <div className="absolute inset-0 rounded-full p-[3px]">
-                    <div className={`bg-transparent rounded-full w-full h-full flex items-center justify-center overflow-hidden ${isCollapsed ? 'p-px ml-3' : 'p-1'}`}>
-                        <div className={`rounded-full w-full h-full flex items-center justify-center overflow-hidden ${isCollapsed ? 'bg-linear-to-tr from-blue-500 via-purple-500 to-indigo-500 shadow-sm shadow-slate-200/50 p-px' : ''}`}>
+                {/* Animated Gradient Ring */}
+                <div
+                    className="absolute inset-0 rounded-full bg-linear-to-tr from-blue-500 via-purple-500 to-pink-500 opacity-90 blur-[1px]"
+                    style={{
+                        animation: 'spin-slow 3s linear infinite'
+                    }}
+                />
+                <div className="absolute inset-0 rounded-full bg-linear-to-bl from-cyan-400 via-blue-500 to-purple-600 animate-pulse opacity-75" />
+
+                {/* Inner Border with Gradient */}
+                <div className={`absolute inset-0 rounded-full p-[2px] bg-linear-to-tr from-blue-500 via-purple-500 to-pink-400`}>
+                    <div className={`bg-white rounded-full w-full h-full flex items-center justify-center overflow-hidden p-[2px]`}>
+                        <div className={`rounded-full w-full h-full flex items-center justify-center overflow-hidden`}>
                             <div className={`relative w-full h-full rounded-full overflow-hidden bg-white group`} key={avatarKey}>
                                 {user?.image ? (
                                     <ImageWithBlur

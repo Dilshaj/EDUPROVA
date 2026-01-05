@@ -17,7 +17,8 @@ apiClient.interceptors.request.use(async (config) => {
         '/auth/register',
         '/auth/login',
         '/auth/social-login',
-        '/auth/accept-invite'
+        '/auth/accept-invite',
+        '/auth/validate-invite'
     ];
 
     // Check if this is a public endpoint
@@ -76,8 +77,18 @@ apiClient.interceptors.response.use(
             errorLog.statusText = error.response.statusText;
             errorLog.responseData = error.response.data;
 
-            console.error('API Client: HTTP Error');
-            console.error(JSON.stringify(errorLog, null, 2));
+            // Suppress console error for 'User already exists' and 'Recent invite already sent' as they are handled by modals
+            const suppressorMessages = [
+                'User with this email already exists',
+                'An invite was already sent to this email in the last 24 hours. Please wait before sending another.'
+            ];
+
+            if (error.response.status === 400 && suppressorMessages.includes(error.response.data?.message)) {
+                // Skip logging to keep console clean
+            } else {
+                console.error(`API Client: HTTP Error ${error.response.status} - ${error.response.data?.message || error.message}`);
+                console.error(JSON.stringify(errorLog, null, 2));
+            }
 
             // Add specific error messages for common status codes
             if (error.response.status === 401) {

@@ -54,6 +54,7 @@ const Login: React.FC = () => {
                 const userRole = (session?.user as any)?.role;
 
                 const dashboardMap: Record<string, string> = {
+                    SUPER_ADMIN: "/dashboard/admin",
                     ADMIN: "/dashboard/admin",
                     TEACHER: "/dashboard/teacher",
                     MONITOR: "/dashboard/monitor",

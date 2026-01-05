@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../database/schemas/user.schema.js';
 import { CloudinaryService } from '../../infrastructure/storage/cloudinary.service.js';
+import { blindIndex } from '../../shared/utils/encryption.util.js';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +18,11 @@ export class UsersService {
             throw new NotFoundException('User not found');
         }
         return user;
+    }
+
+    async findByEmail(email: string): Promise<UserDocument | null> {
+        const emailHash = blindIndex(email);
+        return this.userModel.findOne({ emailHash });
     }
 
     async updateProfile(id: string, updateData: Partial<User>, fileBuffer?: Buffer | null): Promise<UserDocument> {
@@ -93,5 +99,21 @@ export class UsersService {
         console.log('UsersService: Profile updated successfully');
 
         return user;
+    }
+
+    async getTeamMembers() {
+        const teamMembers = await this.userModel.find({
+            role: { $in: ['SUPER_ADMIN', 'ADMIN', 'TEACHER', 'MONITOR'] }
+        }).select('firstName lastName email role avatar createdAt').sort({ createdAt: -1 });
+
+        return teamMembers.map(member => ({
+            id: member._id,
+            name: `${member.firstName} ${member.lastName}`,
+            email: member.email,
+            role: member.role,
+            avatar: member.avatar,
+            status: 'active',
+            joinedAt: (member as any).createdAt,
+        }));
     }
 }

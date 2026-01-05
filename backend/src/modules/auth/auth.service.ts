@@ -102,6 +102,10 @@ export class AuthService {
         return newUser.save();
     }
 
+    async validateInvite(token: string) {
+        return this.inviteService.validateInvite(token);
+    }
+
     async acceptInvite(data: any) {
         const invite = await this.inviteService.validateInvite(data.token);
 

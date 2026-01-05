@@ -71,7 +71,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     };
 
     return (
-        <div ref={overlayRef} className="fixed inset-0 z-9999 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div ref={overlayRef} className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div ref={modalRef} className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 perspective-1000">
                 <div className="p-8 flex flex-col items-center text-center gap-6">
                     <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-inner border ${getIconStyles()}`}>

@@ -13,6 +13,8 @@ import { TeacherSidebar } from "../teacher/components/TeacherSidebar";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Loader2 } from "lucide-react";
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
     isCollapsed: boolean;
@@ -21,6 +23,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
 }) => {
     const asideRef = useRef<HTMLElement>(null);
     const pathname = usePathname();
+    const { data: session, status } = useSession();
 
     useGSAP(() => {
         gsap.to(asideRef.current, {
@@ -30,11 +33,47 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
         });
     }, [isCollapsed]);
 
+    const userRole = (session?.user as any)?.role;
+    const isLoading = status === "loading";
+
+    const renderRoleSidebar = () => {
+        if (isLoading) {
+            return (
+                <div className="flex items-center justify-center py-10 opacity-50">
+                    <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                </div>
+            );
+        }
+
+        if (userRole === "SUPER_ADMIN" || userRole === "ADMIN") {
+            return <AdminSidebar isCollapsed={isCollapsed} />;
+        }
+
+        if (userRole === "TEACHER") {
+            return <TeacherSidebar isCollapsed={isCollapsed} />;
+        }
+
+        if (userRole === "MONITOR") {
+            return <MonitorSidebar isCollapsed={isCollapsed} />;
+        }
+
+        // Fallback to student/default navigation
+        return (
+            <>
+                <SidebarNav isCollapsed={isCollapsed} pathname={pathname} />
+                {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
+                <CommunitySection isCollapsed={isCollapsed} pathname={pathname} />
+                {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
+                <AiToolsSection isCollapsed={isCollapsed} pathname={pathname} />
+            </>
+        );
+    };
+
 
     return (
         <aside
             ref={asideRef}
-            className="w-[280px] h-screen bg-[#F5F9FF] border-r border-slate-200 flex flex-col pt-6 relative font-sans"
+            className="w-[280px] h-screen bg-[#F5F9FF] border-r border-slate-200 flex flex-col pt-6 relative font-sans z-[9000]"
             onWheel={(e) => e.stopPropagation()}
         >
             {/* STICKY TOP: Header & Profile Section */}
@@ -60,21 +99,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
                 className={`flex-1 no-scrollbar py-2 ${isCollapsed ? 'px-2 overflow-visible' : 'px-6 overflow-y-auto'}`}
                 data-lenis-prevent
             >
-                {pathname.startsWith("/dashboard/admin") ? (
-                    <AdminSidebar />
-                ) : pathname.startsWith("/dashboard/teacher") ? (
-                    <TeacherSidebar />
-                ) : pathname.startsWith("/dashboard/monitor") ? (
-                    <MonitorSidebar />
-                ) : (
-                    <>
-                        <SidebarNav isCollapsed={isCollapsed} pathname={pathname} />
-                        {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
-                        <CommunitySection isCollapsed={isCollapsed} pathname={pathname} />
-                        {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
-                        <AiToolsSection isCollapsed={isCollapsed} pathname={pathname} />
-                    </>
-                )}
+                {renderRoleSidebar()}
             </div>
 
             {/* BOTTOM FIXED: Logout */}

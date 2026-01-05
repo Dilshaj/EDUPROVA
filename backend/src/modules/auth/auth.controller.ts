@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UnauthorizedException, Query } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { Public } from './decorators/public.decorator.js';
 
@@ -51,6 +51,12 @@ export class AuthController {
     @Post('auth/accept-invite')
     async acceptInvite(@Body() body: any) {
         return this.authService.acceptInvite(body);
+    }
+
+    @Public()
+    @Get('auth/validate-invite')
+    async validateInvite(@Query('token') token: string) {
+        return this.authService.validateInvite(token);
     }
 
     @Get('auth/profile/:email')

@@ -21,29 +21,29 @@ export class SeedService implements OnModuleInit {
         const adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'admin@eduprova.com';
         const adminPass = this.configService.get<string>('ADMIN_PASSWORD') || 'Admin@123';
 
-        console.log(`Checking for admin account: ${adminEmail}`);
+        console.log(`Checking for super admin account: ${adminEmail}`);
         const adminExists = await this.userModel.findOne({ emailHash: blindIndex(adminEmail) });
 
         if (!adminExists) {
-            console.log('Admin account not found. Seeding...');
+            console.log('Super Admin account not found. Seeding...');
             const hashedPassword = await bcrypt.hash(adminPass, 10);
             const admin = new this.userModel({
-                firstName: 'System',
+                firstName: 'Super',
                 lastName: 'Admin',
                 email: adminEmail,
                 password: hashedPassword,
-                role: 'ADMIN',
+                role: 'SUPER_ADMIN',
             });
             await admin.save();
-            console.log(`Admin account seeded successfully: ${adminEmail}`);
+            console.log(`Super Admin account seeded successfully: ${adminEmail}`);
         } else {
-            console.log(`Admin account already exists: ${adminExists.email}`);
-            // Ensure the role is ADMIN (in case it was manually registered as student)
-            if (adminExists.role !== 'ADMIN') {
-                console.log('Updating role to ADMIN for existing user...');
-                adminExists.role = 'ADMIN';
+            console.log(`Super Admin account already exists: ${adminExists.email}`);
+            // Ensure the role is SUPER_ADMIN (in case it was manually registered or role changed)
+            if (adminExists.role !== 'SUPER_ADMIN') {
+                console.log('Updating role to SUPER_ADMIN for existing user...');
+                adminExists.role = 'SUPER_ADMIN';
                 await adminExists.save();
-                console.log('Role updated to ADMIN successfully.');
+                console.log('Role updated to SUPER_ADMIN successfully.');
             }
         }
     }
