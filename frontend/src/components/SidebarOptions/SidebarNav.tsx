@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,6 +8,8 @@ import {
     ShoppingCart,
     Settings,
 } from "lucide-react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 
 const navItems = [
     { name: "Home", icon: HomeIcon, path: "/dashboard/home" },
@@ -16,44 +18,69 @@ const navItems = [
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
 ];
 
-const SidebarNav = ({ isCollapsed, pathname }: { isCollapsed: boolean, pathname: string }) => {
+const SidebarNav = ({ isCollapsed, pathname, onHover }: {
+    isCollapsed: boolean,
+    pathname: string,
+    onHover?: (name: string | null, event?: React.MouseEvent) => void
+}) => {
+    const activeDesignRef = useRef<HTMLDivElement>(null);
+
+    useGSAP(() => {
+        if (isCollapsed && activeDesignRef.current) {
+            gsap.fromTo(activeDesignRef.current, {
+                x: 100,
+                opacity: 0,
+            }, {
+                duration: 0.3,
+                x: 0,
+                opacity: 1,
+                delay: 0.5,
+                ease: 'power2.out',
+                clearProps: "all"
+            })
+        }
+    }, [isCollapsed]);
+
     return (
-        <nav className={`space-y-1 ${isCollapsed ? 'mb-4' : 'mb-8'}`}>
+        <nav className={`space-y-2 ${isCollapsed ? 'mb-4 flex flex-col items-center' : 'mb-8'}`}>
             {navItems.map((item) => {
                 const isActive = pathname === item.path;
                 return (
-                    <Link
+                    <div
                         key={item.name}
-                        href={item.path}
-                        className={`flex items-center rounded-xl transition-all duration-500 ease-in-out group relative ${isCollapsed ? 'justify-center py-3' : 'px-4 py-3 gap-4'
-                            } ${isActive
-                                ? `bg-linear-to-r from-[#0066FF] to-[#E056FD] text-white shadow-lg shadow-blue-200 ${isCollapsed ? 'mx-1' : ''}`
-                                : `text-slate-600 hover:bg-linear-to-r from-[#0066ff15] to-[#e156fd11] ${isCollapsed ? 'mx-1' : ''}`
-                            }`}
+                        className={`relative group w-full ${isCollapsed ? 'flex flex-col items-center justify-center h-16' : ''}`}
+                        onMouseEnter={(e) => onHover?.(item.name, e)}
+                        onMouseLeave={() => onHover?.(null)}
                     >
-                        <item.icon
-                            size={20}
-                            className={`shrink-0 transition-colors duration-300 ${isActive ? "text-white" : "text-slate-500 group-hover:text-blue-500"}`}
-                        />
+                        <Link
+                            href={item.path}
+                            className={`flex z-50 items-center transition-all duration-300 group relative ${isCollapsed ? `w-10 h-10 justify-center rounded-xl ${isActive ? 'ml-3' : ''}` : 'px-4 py-3 gap-4 rounded-xl mx-0'
+                                } ${isActive
+                                    ? 'bg-linear-to-r from-[#0066FF] to-[#E056FD] text-white shadow-lg shadow-blue-200'
+                                    : `text-slate-600 hover:bg-white/50 hover:text-slate-900 font-medium`
+                                }`}
+                        >
+                            <item.icon
+                                size={20}
+                                className={`shrink-0 z-50 transition-colors duration-300 ${isActive ? "text-white" : "text-slate-400 group-hover:text-blue-500"}`}
+                            />
 
-                        {/* Collapsed Tooltip */}
-                        {isCollapsed && (
-                            <div className="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-300 z-50">
-                                <div className="bg-white border border-slate-100 py-2 px-4 rounded-full shadow-xl shadow-blue-500/10 flex items-center gap-2 whitespace-nowrap">
-                                    <div className="w-1 h-3 bg-blue-500 rounded-full" />
-                                    <span className="text-slate-700 font-semibold text-[14px]">{item.name}</span>
-                                </div>
-                                {/* Tooltip Arrow Overlay (optional, but the image shows a clean pill) */}
+                            <div className={`overflow-hidden transition-all duration-500 ease-in-out flex items-center ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-40 opacity-100'
+                                }`}>
+                                <span className="font-medium text-[15px] whitespace-nowrap ml-0">
+                                    {item.name}
+                                </span>
                             </div>
-                        )}
-
-                        <div className={`overflow-hidden transition-all duration-500 ease-in-out flex items-center ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-40 opacity-100'
-                            }`}>
-                            <span className="font-medium text-[15px] whitespace-nowrap ml-0">
-                                {item.name}
-                            </span>
-                        </div>
-                    </Link>
+                        </Link>
+                        {isActive && isCollapsed && <div ref={activeDesignRef} className="absolute w-20 h-16 ml-6 rounded-3xl bg-[#F3F8FF] z-0">
+                            <div className="relative w-12 bg-transparent h-full ">
+                                <div className="absolute w-11 h-5 -translate-y-5 left-7 rounded-br-2xl bg-[#ffffff] z-10" />
+                                <div className="absolute w-11 h-5 translate-y-16 left-7 rounded-tr-2xl bg-[#ffffff] z-10" />
+                                <div className="absolute w-10 -translate-y-4 left-7 h-5 bg-[#F3F8FF] z-5" />
+                                <div className="absolute w-10 h-5 translate-y-15 left-7 bg-[#F3F8FF] z-5" />
+                            </div>
+                        </div>}
+                    </div>
                 );
             })}
         </nav>

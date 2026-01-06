@@ -175,7 +175,7 @@ const EditProfilePage = () => {
                                                     data-[state=active]:bg-white
                                                     data-[state=active]:text-blue-700
                                                     data-[state=active]:shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08),0_1px_4px_-2px_rgba(0,0,0,0.04)]
-                                                    data-[state=active]:ring-1 data-[state=active]:ring-black/[0.03]
+                                                    data-[state=active]:ring-1 data-[state=active]:ring-black/3
                                                     
                                                     focus-visible:ring-0
                                                 "

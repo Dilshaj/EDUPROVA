@@ -28,7 +28,7 @@ const SidebarHeader = ({ isCollapsed, setIsCollapsed, hideToggle }: {
                         setIsCollapsed(!isCollapsed);
                     }}
                     className={`text-slate-400 hover:text-slate-600 transition-all duration-300 transform cursor-pointer ${isCollapsed
-                        ? 'absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-transparent rotate-180 rounded-lg hover:bg-[#F5F9FF]' 
+                        ? 'absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-transparent rotate-180 rounded-lg hover:bg-[#F5F9FF]'
                         : 'relative'
                         }`}
                 >

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Clock, X, Loader2 } from 'lucide-react';
+import { Mail, Clock, X, Loader2, Trash2 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { toast } from 'sonner';
 
@@ -37,12 +37,25 @@ const TeamAccessPage = () => {
     const [processingInviteId, setProcessingInviteId] = useState<string | null>(null);
 
     const [isUserExistsModalOpen, setIsUserExistsModalOpen] = useState(false);
+    const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [modalContent, setModalContent] = useState({ title: '', message: '' });
 
     useEffect(() => {
+        fetchCurrentUser();
         fetchTeamMembers();
         fetchPendingInvites();
     }, []);
+
+    const fetchCurrentUser = async () => {
+        try {
+            const response = await apiClient.get('/users/profile');
+            setCurrentUser(response.data);
+        } catch (error) {
+            console.error('Error fetching current user:', error);
+        }
+    };
 
     const fetchTeamMembers = async () => {
         try {
@@ -142,6 +155,24 @@ const TeamAccessPage = () => {
         }
     };
 
+    const handleRemoveMember = async () => {
+        if (!memberToRemove) return;
+
+        try {
+            setIsLoading(true);
+            await apiClient.delete(`/users/team-member/${memberToRemove.id}`);
+            toast.success('Team member removed successfully');
+            fetchTeamMembers();
+        } catch (error: any) {
+            console.error('Error removing member:', error);
+            toast.error(error.userMessage || 'Failed to remove team member');
+        } finally {
+            setIsLoading(false);
+            setIsRemoveModalOpen(false);
+            setMemberToRemove(null);
+        }
+    };
+
     const roles: Role[] = ['ADMIN', 'TEACHER', 'MONITOR'];
 
     const getRoleDescription = (role: Role) => {
@@ -174,8 +205,8 @@ const TeamAccessPage = () => {
     };
 
     return (
-        <div className="p-8 bg-linear-to-br from-slate-50 to-slate-100 min-h-screen">
-            <div className="max-w-7xl mx-auto">
+        <div className="p-8 bg-[#DBF1FE] min-h-screen">
+            <div className="w-full">
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-slate-900 mb-2">Team Access</h1>
@@ -197,31 +228,39 @@ const TeamAccessPage = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="Enter email address"
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                    className="w-full px-4 py-3.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 bg-slate-50/50 text-sm transition-all placeholder:text-slate-400"
                                     onKeyPress={(e) => e.key === 'Enter' && handleSendInvite()}
                                 />
                             </div>
 
                             {/* Role Selection */}
                             <div className="mb-4">
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="flex bg-slate-100 p-1.5 rounded-2xl relative h-[48px] items-center">
                                     {roles.map((role) => (
                                         <button
                                             key={role}
                                             onClick={() => setSelectedRole(role)}
-                                            className={`px-3b cursor-pointer py-2.5 rounded-lg text-xs font-semibold transition-all ${selectedRole === role
-                                                ? 'bg-slate-900 text-white'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer z-10 ${selectedRole === role
+                                                ? 'text-slate-900'
+                                                : 'text-slate-500 hover:text-slate-700'
                                                 }`}
                                         >
-                                            {role}
+                                            {role.charAt(0) + role.slice(1).toLowerCase()}
                                         </button>
                                     ))}
+                                    {/* Sliding background pill */}
+                                    <div
+                                        className="absolute top-1.5 bottom-1.5 rounded-xl bg-white shadow-[0_2px_10px_rgba(0,0,0,0.06)] transition-all duration-300 ease-in-out"
+                                        style={{
+                                            width: `calc((100% - 12px) / 3)`,
+                                            left: `calc(6px + (${roles.indexOf(selectedRole)} * (100% - 12px) / 3))`
+                                        }}
+                                    />
                                 </div>
                             </div>
 
                             {/* Role Description */}
-                            <p className="text-xs text-slate-500 mb-6">
+                            <p className="text-[11px] text-slate-500 mb-6 px-1">
                                 {getRoleDescription(selectedRole)}
                             </p>
 
@@ -229,7 +268,7 @@ const TeamAccessPage = () => {
                             <button
                                 onClick={handleSendInvite}
                                 disabled={isSending || !email}
-                                className="w-full cursor-pointer bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full cursor-pointer bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-[0.98] shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isSending ? (
                                     <>
@@ -282,7 +321,7 @@ const TeamAccessPage = () => {
                                         {activeMembers.map((member, index) => (
                                             <div
                                                 key={member.id}
-                                                className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-slate-50 transition-colors"
+                                                className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-slate-50 transition-all group border border-transparent hover:border-slate-100"
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${getAvatarColor(index)}`}>
@@ -293,20 +332,36 @@ const TeamAccessPage = () => {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-slate-900 text-sm">
+                                                        <p className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                                                             {member.email}
+                                                            {member.id === currentUser?.id && (
+                                                                <span className="text-[10px] bg-slate-100 text-slate-500 py-0.5 px-1.5 rounded-md font-bold uppercase tracking-wider">
+                                                                    You
+                                                                </span>
+                                                            )}
                                                         </p>
                                                         <p className="text-xs text-slate-500">{member.role}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
-                                                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                                        Active
-                                                    </span>
-                                                    {/* <button className="text-xs font-semibold text-slate-600 hover:text-red-600 transition-colors">
-                                                        Remove
-                                                    </button> */}
+                                                    <div className={`flex items-center gap-3 ${member.id !== currentUser?.id ? 'group-hover:hidden' : ''}`}>
+                                                        <span className="flex items-center gap-1.5 text-xs font-semibold text-green-600">
+                                                            <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                                            Active
+                                                        </span>
+                                                    </div>
+                                                    {member.id !== currentUser?.id && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setMemberToRemove(member);
+                                                                setIsRemoveModalOpen(true);
+                                                            }}
+                                                            className="hidden group-hover:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-all cursor-pointer"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            Remove
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -328,7 +383,7 @@ const TeamAccessPage = () => {
                                 <div className="space-y-3">
                                     {pendingInvites.map((invite, index) => (
                                         <div
-                                            key={invite.id}
+                                            key={invite.id + index}
                                             className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-slate-50 transition-colors"
                                         >
                                             <div className="flex items-center gap-3">
@@ -371,6 +426,21 @@ const TeamAccessPage = () => {
                         )}
                     </div>
                 </div>
+
+                <ConfirmationModal
+                    isOpen={isRemoveModalOpen}
+                    onConfirm={handleRemoveMember}
+                    onCancel={() => {
+                        setIsRemoveModalOpen(false);
+                        setMemberToRemove(null);
+                    }}
+                    title="Remove Team Member"
+                    message={`Are you sure you want to remove ${memberToRemove?.email}? Their account and data will be permanently deleted from the database.`}
+                    confirmLabel="Remove"
+                    cancelLabel="Cancel"
+                    type="danger"
+                    isLoading={isLoading}
+                />
 
                 <ConfirmationModal
                     isOpen={isUserExistsModalOpen}

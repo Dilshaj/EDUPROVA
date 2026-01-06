@@ -26,19 +26,28 @@ apiClient.interceptors.request.use(async (config) => {
 
     if (typeof window !== 'undefined' && !isPublicEndpoint) {
         const session = await getSession();
-        console.log('API Client: Session check', {
+        const accessToken = (session as any)?.accessToken;
+
+        console.log('API Client: Requesting', config.url, {
             hasSession: !!session,
-            hasToken: !!(session as any)?.accessToken,
-            tokenSnippet: (session as any)?.accessToken ? (session as any).accessToken.substring(0, 10) + '...' : 'none'
+            hasToken: !!accessToken,
+            tokenFormat: accessToken?.includes('.') ? 'JWT' : 'Other'
         });
-        if (session && (session as any).accessToken) {
-            config.headers.Authorization = `Bearer ${(session as any).accessToken}`;
+
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+            console.log('API Client: Authorization header attached');
+        } else {
+            console.warn('API Client: No access token found in session for protected endpoint:', config.url);
         }
     } else if (isPublicEndpoint) {
         console.log('API Client: Skipping auth for public endpoint:', config.url);
+    } else if (typeof window === 'undefined') {
+        console.log('API Client: Server-side request (skipping client-side session check):', config.url);
     }
     return config;
 }, (error) => {
+    console.error('API Client: Request interceptor error', error);
     return Promise.reject(error);
 });
 

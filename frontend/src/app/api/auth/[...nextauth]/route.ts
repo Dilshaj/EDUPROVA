@@ -64,8 +64,10 @@ export const authOptions: NextAuthOptions = {
                     });
 
                     if (res.data && res.data.user) {
-                        // Update user object with backend data
+                        // Update user object with backend data to prefer our DB over Google defaults
                         user.id = res.data.user.id;
+                        user.name = `${res.data.user.firstName} ${res.data.user.lastName}`;
+                        user.image = res.data.user.avatar;
                         (user as any).role = res.data.user.role;
                         (user as any).accessToken = res.data.access_token;
                         return true;
@@ -96,8 +98,15 @@ export const authOptions: NextAuthOptions = {
 
             // Handle initial sign-in
             if (user) {
+                console.log("NextAuth JWT: Initial sign-in for user", {
+                    id: user.id,
+                    email: user.email,
+                    hasAccessToken: !!(user as any).accessToken
+                });
                 token.id = user.id;
                 token.role = (user as any).role;
+                token.name = user.name;
+                token.picture = user.image;
                 token.remember = (user as any).remember;
                 token.accessToken = (user as any).accessToken;
 
@@ -108,11 +117,15 @@ export const authOptions: NextAuthOptions = {
                     token.exp = Math.floor(Date.now() / 1000) + 24 * 60 * 60; // 24 hours
                 }
             }
-            // Only use account.access_token if it's not credentials (e.g. Google)
-            // AND if we don't already have one from the backend sync in signIn callback
+
+            // For social logins, if we don't have a backend accessToken yet, 
+            // the signIn callback should have set it on the 'user' object.
+            // If it's still missing and it's not a credentials provider, we might have a problem.
             if (account && account.provider !== "credentials" && !token.accessToken) {
+                console.warn("NextAuth JWT: Social login token missing backend accessToken. Falling back to provider token.");
                 token.accessToken = account.access_token;
             }
+
             return token;
         },
         async session({ session, token }) {

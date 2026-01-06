@@ -22,7 +22,7 @@ import { InviteModule } from '../invite/invite.module.js';
                 console.log('AuthModule - Using secret length:', secret.length);
                 return {
                     secret: secret,
-                    signOptions: { expiresIn: '1d' },
+                    signOptions: { expiresIn: '7d' },
                 };
             },
         }),

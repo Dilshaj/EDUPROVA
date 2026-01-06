@@ -1,6 +1,8 @@
-import { Controller, Get, Patch, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Req, Delete, Param } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/decorators/roles.decorator.js';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -56,5 +58,12 @@ export class UsersController {
     @Get('team-members')
     async getTeamMembers() {
         return this.usersService.getTeamMembers();
+    }
+
+    @Delete('team-member/:id')
+    @UseGuards(RolesGuard)
+    @Roles('ADMIN', 'SUPER_ADMIN')
+    async removeTeamMember(@Param('id') id: string, @Req() req) {
+        return this.usersService.removeTeamMember(id, req.user.userId);
     }
 }

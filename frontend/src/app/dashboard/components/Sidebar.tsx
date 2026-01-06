@@ -22,8 +22,27 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
     hideToggle?: boolean;
 }) => {
     const asideRef = useRef<HTMLElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
     const { data: session, status } = useSession();
+    const [hoveredTooltip, setHoveredTooltip] = React.useState<{ name: string; y: number } | null>(null);
+
+    const handleHover = (name: string | null, event?: React.MouseEvent) => {
+        if (!isCollapsed || !name || !event || !scrollContainerRef.current) {
+            setHoveredTooltip(null);
+            return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const containerRect = asideRef.current?.getBoundingClientRect();
+
+        if (containerRect) {
+            setHoveredTooltip({
+                name,
+                y: rect.top + rect.height / 2 - containerRect.top
+            });
+        }
+    };
 
     useGSAP(() => {
         gsap.to(asideRef.current, {
@@ -46,25 +65,25 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
         }
 
         if (userRole === "SUPER_ADMIN" || userRole === "ADMIN") {
-            return <AdminSidebar isCollapsed={isCollapsed} />;
+            return <AdminSidebar isCollapsed={isCollapsed} onHover={handleHover} />;
         }
 
         if (userRole === "TEACHER") {
-            return <TeacherSidebar isCollapsed={isCollapsed} />;
+            return <TeacherSidebar isCollapsed={isCollapsed} onHover={handleHover} />;
         }
 
         if (userRole === "MONITOR") {
-            return <MonitorSidebar isCollapsed={isCollapsed} />;
+            return <MonitorSidebar isCollapsed={isCollapsed} onHover={handleHover} />;
         }
 
         // Fallback to student/default navigation
         return (
             <>
-                <SidebarNav isCollapsed={isCollapsed} pathname={pathname} />
+                <SidebarNav isCollapsed={isCollapsed} pathname={pathname} onHover={handleHover} />
                 {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
-                <CommunitySection isCollapsed={isCollapsed} pathname={pathname} />
+                <CommunitySection isCollapsed={isCollapsed} pathname={pathname} onHover={handleHover} />
                 {isCollapsed && <div className="h-px w-[80%] bg-slate-200 mb-4 mx-auto" />}
-                <AiToolsSection isCollapsed={isCollapsed} pathname={pathname} />
+                <AiToolsSection isCollapsed={isCollapsed} pathname={pathname} onHover={handleHover} />
             </>
         );
     };
@@ -73,7 +92,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
     return (
         <aside
             ref={asideRef}
-            className="w-[280px] h-screen bg-[#F5F9FF] border-r border-slate-200 flex flex-col pt-6 relative font-sans z-[9000]"
+            className={`w-[280px] h-screen bg-[white] flex flex-col pt-6 relative font-sans z-9000 ${!isCollapsed ? 'border-r border-slate-200/60' : ''}`}
             onWheel={(e) => e.stopPropagation()}
         >
             {/* STICKY TOP: Header & Profile Section */}
@@ -94,16 +113,37 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
                 <ProfileSection isCollapsed={isCollapsed} />
             </div>
 
+            {/* Divider between Profile and Options */}
+            <div className={`h-px bg-slate-200/60 shrink-0 ${isCollapsed ? 'mx-4 mb-2' : 'mx-8 mb-4'}`} />
+
             {/* SCROLLABLE MIDDLE: Navigation & Tools */}
             <div
-                className={`flex-1 no-scrollbar py-2 ${isCollapsed ? 'px-2 overflow-visible' : 'px-6 overflow-y-auto'}`}
+                ref={scrollContainerRef}
+                className={`flex-1 no-scrollbar py-2 overflow-y-auto ${isCollapsed ? 'overflow-x-hidden' : 'px-6'}`}
                 data-lenis-prevent
             >
                 {renderRoleSidebar()}
             </div>
 
+            {/* Tooltip for collapsed state - Outside the scrollable area to prevent clipping */}
+            {isCollapsed && hoveredTooltip && (
+                <div
+                    className="fixed pointer-events-none z-9999 transition-all duration-200 ease-out"
+                    style={{
+                        top: `${hoveredTooltip.y}px`,
+                        left: '80px',
+                        transform: 'translateY(-50%)'
+                    }}
+                >
+                    <div className="ml-4 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg whitespace-nowrap shadow-xl relative">
+                        {hoveredTooltip.name}
+                        <div className="absolute right-[calc(100%-1px)] top-1/2 -translate-y-1/2 border-4 border-transparent border-r-blue-500" />
+                    </div>
+                </div>
+            )}
+
             {/* BOTTOM FIXED: Logout */}
-            <LogoutButton isCollapsed={isCollapsed} />
+            <LogoutButton isCollapsed={isCollapsed} onHover={handleHover} />
         </aside>
     );
 };

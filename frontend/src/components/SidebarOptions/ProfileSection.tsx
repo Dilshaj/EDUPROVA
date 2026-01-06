@@ -154,10 +154,6 @@ const ProfileSection: React.FC<{ isCollapsed: boolean }> = ({ isCollapsed }) => 
                         </div>
                     )
                 } */}
-
-
-
-                <div className="w-full h-px bg-slate-200 mt-4" />
             </div>
         </Link>
     );
