@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Mail, Clock, X, Loader2, Trash2 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -28,6 +30,8 @@ interface PendingInvite {
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 
 const TeamAccessPage = () => {
+    const { data: session, status } = useSession();
+    const router = useRouter();
     const [email, setEmail] = useState('');
     const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
     const [isLoading, setIsLoading] = useState(false);
@@ -43,10 +47,20 @@ const TeamAccessPage = () => {
     const [modalContent, setModalContent] = useState({ title: '', message: '' });
 
     useEffect(() => {
-        fetchCurrentUser();
-        fetchTeamMembers();
-        fetchPendingInvites();
-    }, []);
+        if (status === 'unauthenticated') {
+            router.push('/auth/login');
+        } else if (status === 'authenticated' && (session?.user as any)?.role !== 'SUPER_ADMIN') {
+            router.push('/dashboard/admin');
+        }
+    }, [session, status, router]);
+
+    useEffect(() => {
+        if (status === 'authenticated' && (session?.user as any)?.role === 'SUPER_ADMIN') {
+            fetchCurrentUser();
+            fetchTeamMembers();
+            fetchPendingInvites();
+        }
+    }, [status, session]);
 
     const fetchCurrentUser = async () => {
         try {
@@ -203,6 +217,18 @@ const TeamAccessPage = () => {
         const date = new Date(dateString);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
+
+    if (status === 'loading') {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#DBF1FE]">
+                <Loader2 className="w-10 h-10 animate-spin text-slate-400" />
+            </div>
+        );
+    }
+
+    if ((session?.user as any)?.role !== 'SUPER_ADMIN') {
+        return null;
+    }
 
     return (
         <div className="p-8 bg-[#DBF1FE] min-h-screen">

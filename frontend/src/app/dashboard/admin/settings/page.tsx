@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bell, Shield, Palette, Database } from 'lucide-react';
 
-const AdminSettingsPage = () => {
+const AdminSettingsPage: React.FC = () => {
     const settingsSections = [
         {
             title: 'Notifications',
@@ -46,9 +46,9 @@ const AdminSettingsPage = () => {
     return (
         <div className="p-8">
             <div className="max-w-4xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Settings</h1>
-                    <p className="text-slate-600">Manage your application preferences</p>
+                <div className="mb-12">
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Admin Settings</h1>
+                    <p className="text-slate-600">Configure your administrative preferences.</p>
                 </div>
 
                 <div className="space-y-6">
@@ -107,7 +107,7 @@ const AdminSettingsPage = () => {
                     })}
                 </div>
 
-                <div className="mt-8 flex justify-end gap-4">
+                <div className="mt-12 flex justify-end gap-4">
                     <button className="px-6 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
                         Cancel
                     </button>

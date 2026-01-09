@@ -26,6 +26,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
     const pathname = usePathname();
     const { data: session, status } = useSession();
     const [hoveredTooltip, setHoveredTooltip] = React.useState<{ name: string; y: number } | null>(null);
+    const [isSidebarHovered, setIsSidebarHovered] = React.useState(false);
 
     const handleHover = (name: string | null, event?: React.MouseEvent) => {
         if (!isCollapsed || !name || !event || !scrollContainerRef.current) {
@@ -94,6 +95,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
             ref={asideRef}
             className={`w-[280px] h-screen bg-[white] flex flex-col pt-6 relative font-sans z-9000 ${!isCollapsed ? 'border-r border-slate-200/60' : ''}`}
             onWheel={(e) => e.stopPropagation()}
+            onMouseEnter={() => setIsSidebarHovered(true)}
+            onMouseLeave={() => setIsSidebarHovered(false)}
         >
             {/* STICKY TOP: Header & Profile Section */}
             <div className={`flex flex-col shrink-0 relative z-0 ${isCollapsed ? 'px-2 overflow-hidden' : 'px-6'}`}>
@@ -109,6 +112,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, hideToggle }: {
                     isCollapsed={isCollapsed}
                     setIsCollapsed={setIsCollapsed}
                     hideToggle={hideToggle}
+                    isSidebarHovered={isSidebarHovered}
                 />
                 <ProfileSection isCollapsed={isCollapsed} />
             </div>

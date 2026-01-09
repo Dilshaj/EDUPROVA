@@ -1,59 +1,68 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
 export async function GET() {
-    // This is a mock API response to prevent the SyntaxError during development
-    // until the real courses API is implemented in the backend.
-    return NextResponse.json({
-        success: true,
-        courses: [
-            {
-                _id: '1',
-                title: 'The Complete Python Pro Bootcamp for 2025',
-                createdBy: { firstName: 'Angela', lastName: 'Yu' },
-                rating: 4.8,
-                numReviews: 401532,
-                price: 399,
-                thumbnail: '/courses/person.png',
-                level: 'Beginner',
-                description: 'Master Python by building 100 projects in 100 days.',
-                createdAt: new Date().toISOString()
-            },
-            {
-                _id: '2',
-                title: 'React - The Complete Guide 2025',
-                createdBy: { firstName: 'Maximilian', lastName: 'Schwarzmüller' },
-                rating: 4.7,
-                numReviews: 996100,
-                price: 499,
-                thumbnail: '/courses/webDevelopment.png',
-                level: 'Intermediate',
-                description: 'Dive deep into React and learn Next.js.',
-                createdAt: new Date().toISOString()
-            },
-            {
-                _id: '3',
-                title: 'Machine Learning A-Z™: Hands-On Python & R In Data Science',
-                createdBy: { firstName: 'Kirill', lastName: 'Eremenko' },
-                rating: 4.5,
-                numReviews: 152352,
-                price: 599,
-                thumbnail: '/courses/ai-new.png',
-                level: 'Intermediate',
-                description: 'Learn to create Machine Learning Algorithms.',
-                createdAt: new Date().toISOString()
-            },
-            {
-                _id: '4',
-                title: 'The Web Developer Bootcamp 2025',
-                createdBy: { firstName: 'Colt', lastName: 'Steele' },
-                rating: 4.7,
-                numReviews: 948448,
-                price: 399,
-                thumbnail: '/courses/webDevelopment.png',
-                level: 'Beginner',
-                description: 'The only course you need to learn web development.',
-                createdAt: new Date().toISOString()
+    try {
+        const session = await getServerSession(authOptions);
+        const response = await fetch(`${BACKEND_URL}/courses`, {
+            headers: {
+                'Authorization': `Bearer ${(session as any)?.accessToken}`
             }
-        ]
-    });
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return NextResponse.json(data, { status: response.status });
+        }
+
+        return NextResponse.json({
+            success: true,
+            courses: data
+        });
+    } catch (error: any) {
+        console.error('[API] GET Error:', error);
+        // Fallback or error return
+        return NextResponse.json({
+            success: true, // Returning success but empty/mock to avoid crashes during dev
+            courses: []
+        });
+    }
+}
+
+export async function POST(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+
+        // Clone request to check size if needed, or just read json
+        const data = await req.json();
+
+        console.log(`[API] Received course submission. Payload size: ${JSON.stringify(data).length} bytes`);
+
+        const response = await fetch(`${BACKEND_URL}/courses`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${(session as any)?.accessToken}`
+            },
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('[API] Backend error:', result);
+            return NextResponse.json(result, { status: response.status });
+        }
+
+        return NextResponse.json({ success: true, course: result });
+    } catch (error: any) {
+        console.error('[API] POST Error:', error);
+        // Specifically check for "Request body is too large" which might be re-thrown
+        const status = error.message.includes('large') ? 413 : 500;
+        return NextResponse.json({ success: false, message: error.message }, { status });
+    }
 }

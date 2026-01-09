@@ -2,10 +2,11 @@ import React from "react";
 import Image from "next/image";
 import { PanelLeftClose } from "lucide-react";
 
-const SidebarHeader = ({ isCollapsed, setIsCollapsed, hideToggle }: {
+const SidebarHeader = ({ isCollapsed, setIsCollapsed, hideToggle, isSidebarHovered }: {
     isCollapsed: boolean;
     setIsCollapsed: (val: boolean) => void;
     hideToggle?: boolean;
+    isSidebarHovered?: boolean;
 }) => {
     return (
         <div className={`flex items-center bg-transparent mb-8 relative group transition-all duration-300 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
@@ -29,7 +30,7 @@ const SidebarHeader = ({ isCollapsed, setIsCollapsed, hideToggle }: {
                     }}
                     className={`text-slate-400 hover:text-slate-600 transition-all duration-300 transform cursor-pointer ${isCollapsed
                         ? 'absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-transparent rotate-180 rounded-lg hover:bg-[#F5F9FF]'
-                        : 'relative'
+                        : `relative ${isSidebarHovered ? 'opacity-100' : 'opacity-0'}`
                         }`}
                 >
                     <PanelLeftClose size={20} />

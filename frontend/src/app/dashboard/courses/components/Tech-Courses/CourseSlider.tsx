@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Star, Clock, Users } from "lucide-react";
 import { createPortal } from "react-dom";
 import CourseHoverCard from "./CourseHoverCard";
 
@@ -40,6 +40,7 @@ const CourseSlider: React.FC<CourseSliderProps> = ({ title, courses }) => {
   const [hoveredCourseIndex, setHoveredCourseIndex] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{ top: number; left: number } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const enterTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleScroll = () => {
     if (scrollContainerRef.current) {
@@ -81,37 +82,38 @@ const CourseSlider: React.FC<CourseSliderProps> = ({ title, courses }) => {
 
   const handleMouseEnter = (index: number, e: React.MouseEvent<HTMLAnchorElement>) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
 
     const rect = e.currentTarget.getBoundingClientRect();
-    const hoverCardWidth = 340; // Width of CourseHoverCard
-    const gap = 16; // Gap between card and hover card
 
-    // Default to right side
-    // Add window.scrollX to account for absolute positioning relative to document
-    let left = rect.right + gap + window.scrollX;
+    enterTimeoutRef.current = setTimeout(() => {
+      const hoverCardWidth = 380;
+      const gap = 24;
 
-    // Check if it fits on the right (using viewport width)
-    if (rect.right + gap + hoverCardWidth > window.innerWidth - 10) {
-      // If not, try left side
-      left = rect.left - hoverCardWidth - gap + window.scrollX;
-    }
+      let left = rect.right + gap + window.scrollX;
 
-    // Vertical alignment: align top, but keep within viewport
-    // Add window.scrollY to account for absolute positioning relative to document
-    let top = rect.top + window.scrollY - 20; // Slightly above for better alignment with card top
+      if (rect.right + gap + hoverCardWidth > window.innerWidth - 10) {
+        left = rect.left - hoverCardWidth - gap + window.scrollX;
+      }
 
-    setHoverPosition({
-      top: top,
-      left: left
-    });
-    setHoveredCourseIndex(index);
+      // Center vertically relative to the card
+      let top = rect.top + window.scrollY + (rect.height / 2);
+
+      setHoverPosition({
+        top: top,
+        left: left
+      });
+      setHoveredCourseIndex(index);
+    }, 400); // 400ms delay before showing to prevent "hiding" content while moving mouse
   };
 
   const handleMouseLeave = () => {
+    if (enterTimeoutRef.current) clearTimeout(enterTimeoutRef.current);
+
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredCourseIndex(null);
       setHoverPosition(null);
-    }, 300); // Increased delay to allow moving to the hover card
+    }, 300);
   };
 
   const handleHoverCardEnter = () => {
@@ -131,7 +133,7 @@ const CourseSlider: React.FC<CourseSliderProps> = ({ title, courses }) => {
         {/* Left Arrow */}
         <button
           onClick={() => scroll("left")}
-          className={`absolute left-[-20px] top-1/3 -translate-y-1/2 z-20 w-12 h-12 bg-white text-gray-900 border border-gray-200 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-50 ${showLeftArrow ? "opacity-100 visible" : "opacity-0 invisible"
+          className={`absolute left-[-20px] top-1/3 -translate-y-1/2 z-20 w-12 h-12 bg-white text-gray-900 border border-gray-200 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-50 cursor-pointer ${showLeftArrow ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           aria-label="Scroll left"
         >
@@ -148,98 +150,108 @@ const CourseSlider: React.FC<CourseSliderProps> = ({ title, courses }) => {
             msOverflowStyle: 'none'  /* IE and Edge */
           }}
         >
-          {courses.map((course, i) => (
-            <Link
-              href={`/dashboard/courses/${course._id}`}
-              key={i}
-              className="w-[280px] h-[360px] shrink-0 flex flex-col cursor-pointer group/card bg-white transition-all duration-200 hover:scale-[1.03] shadow-sm hover:shadow-xl rounded-lg overflow-hidden border border-gray-200"
-              onMouseEnter={(e) => handleMouseEnter(i, e)}
-              onMouseLeave={handleMouseLeave}
-            >
-              {/* Image Container - Fixed height */}
-              <div className="relative w-full h-[157.5px] bg-gray-200 shrink-0">
-                <Image
-                  src={course.image}
-                  alt={course.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+          {courses.map((course, i) => {
+            const priceNum = parseInt(course.price.replace(/[^\d]/g, '')) || 0;
+            const originalPriceNum = parseInt(course.originalPrice.replace(/[^\d]/g, '')) || 0;
+            const discount = originalPriceNum > 0 ? Math.round(((originalPriceNum - priceNum) / originalPriceNum) * 100) : 0;
 
-              {/* Content - Fixed height with flex layout */}
-              <div className="flex flex-col flex-1 p-3 min-h-0">
-                {/* Title - Fixed 2 lines */}
-                <h3 className="font-bold text-[15px] text-gray-900 leading-[1.3] mb-2 line-clamp-2 h-[39px] group-hover/card:text-blue-600 transition-colors">
-                  {course.title}
-                </h3>
-
-                {/* Author - Single line */}
-                <p className="text-xs text-gray-500 mb-2 truncate">
-                  {course.author}
-                </p>
-
-                {/* Rating - Fixed height */}
-                <div className="flex items-center gap-1 mb-2">
-                  <span className="text-sm font-bold text-gray-900">
-                    {course.rating}
-                  </span>
-                  <div className="flex text-[#f4c150] text-xs">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <svg
-                        key={s}
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-3.5 h-3.5"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    ({course.reviews})
-                  </span>
-                </div>
-
-                {/* Price - Fixed height */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="font-bold text-gray-900 text-lg">
-                    {course.price}
-                  </span>
-                  {course.originalPrice && (
-                    <span className="text-sm text-gray-500 line-through decoration-gray-500">
-                      {course.originalPrice}
-                    </span>
-                  )}
-                </div>
-
-                {/* Badges - Push to bottom */}
-                <div className="mt-auto flex items-center gap-2 flex-wrap">
-                  {course.premium && (
-                    <>
-                      <span className="bg-linear-to-r from-pink-600 to-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm flex items-center gap-1">
-                        <Crown size={12} className="fill-white" />
-                        Premium
-                      </span>
-                      <span className="bg-green-200 text-black text-[10px] font-bold px-2 py-0.5 rounded-sm">
+            return (
+              <Link
+                href={`/dashboard/courses/${course._id}`}
+                key={i}
+                className="w-[280px] h-[380px] shrink-0 flex flex-col cursor-pointer group/card bg-white transition-all duration-200 hover:scale-[1.02] shadow-sm hover:shadow-md rounded-2xl overflow-hidden border border-gray-100"
+                onMouseEnter={(e) => handleMouseEnter(i, e)}
+                onMouseLeave={handleMouseLeave}
+              >
+                {/* Image Container - Fixed height */}
+                <div className="relative w-full h-[160px] bg-gray-200 shrink-0">
+                  <Image
+                    src={course.image}
+                    alt={course.title}
+                    fill
+                    className="object-cover"
+                  />
+                  {/* Bestseller/Hot Badge with Gradient */}
+                  {course.bestseller ? (
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="bg-linear-to-r from-[#1E62FF] to-[#D659FF] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
                         Bestseller
                       </span>
-                    </>
-                  )}
+                    </div>
+                  ) : course.rating >= 4.0 ? (
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="bg-linear-to-r from-[#1E62FF] to-[#D659FF] text-white text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md">
+                        Hot
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            </Link>
-          ))}
+
+                {/* Content - Fixed height with flex layout */}
+                <div className="flex flex-col flex-1 p-4 min-h-0">
+                  {/* Title - Fixed 2 lines */}
+                  <h3 className="font-bold text-[15px] text-gray-900 leading-tight mb-2 line-clamp-2 h-[38px] group-hover/card:text-[#1E62FF] transition-colors">
+                    {course.title}
+                  </h3>
+
+                  {/* Author - Single line */}
+                  <p className="text-xs text-gray-500 mb-2 truncate font-medium">
+                    {course.author}
+                  </p>
+
+                  {/* Rating - Fixed height */}
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Star size={14} className="fill-[#f4c150] text-[#f4c150]" />
+                    <span className="text-sm font-bold text-gray-800">
+                      {course.rating}
+                    </span>
+                    <span className="text-[11px] text-gray-400 font-medium">
+                      ({course.reviews} students)
+                    </span>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="flex items-center gap-1.5 text-gray-500">
+                      <Clock size={14} />
+                      <span className="text-[11px] font-medium">{course.duration || '63 hours'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-gray-500">
+                      <Users size={14} />
+                      <span className="text-[11px] font-medium capitalize">{course.level || 'Beginner'}</span>
+                    </div>
+                  </div>
+
+                  {/* Pricing - Gradient Text */}
+                  <div className="mt-auto flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-transparent bg-clip-text bg-linear-to-r from-[#1E62FF] to-[#D659FF] text-xl">
+                        {course.price}
+                      </span>
+                      {course.originalPrice && (
+                        <span className="text-xs text-gray-400 line-through font-medium">
+                          {course.originalPrice}
+                        </span>
+                      )}
+                    </div>
+                    {discount > 0 && (
+                      <div className="bg-gray-100 px-2 py-0.5 rounded-md">
+                        <span className="text-gray-600 text-[10px] font-bold">
+                          {discount}% off
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
         {/* Right Arrow */}
         <button
           onClick={() => scroll("right")}
-          className={`absolute right-[-20px] top-1/3 -translate-y-1/2 z-20 w-12 h-12 bg-white text-gray-900 border border-gray-200 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-50 ${showRightArrow ? "opacity-100 visible" : "opacity-0 invisible"
+          className={`absolute right-[-20px] top-1/3 -translate-y-1/2 z-20 w-12 h-12 bg-white text-gray-900 border border-gray-200 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:bg-gray-50 cursor-pointer ${showRightArrow ? "opacity-100 visible" : "opacity-0 invisible"
             }`}
           aria-label="Scroll right"
         >

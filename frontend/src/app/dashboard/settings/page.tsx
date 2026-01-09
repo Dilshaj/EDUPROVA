@@ -14,6 +14,7 @@ import {
   Moon,
   Download,
   ChevronRight,
+  FileText
 } from "lucide-react"
 
 import { ProfileSection } from "./components/ProfileSection"

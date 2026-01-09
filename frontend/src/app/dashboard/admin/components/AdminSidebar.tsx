@@ -3,7 +3,8 @@
 import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Settings } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Home, Users, Settings, PlusCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 
@@ -12,6 +13,7 @@ const AdminSidebar = ({ isCollapsed, onHover }: {
   onHover?: (name: string | null, event?: React.MouseEvent) => void
 }) => {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const activeDesignRef = useRef<HTMLDivElement>(null);
 
   const adminMenuItems = [
@@ -21,11 +23,29 @@ const AdminSidebar = ({ isCollapsed, onHover }: {
       href: '/dashboard/admin',
       isActive: pathname === '/dashboard/admin'
     },
-    {
+    ...((session?.user as any)?.role === 'SUPER_ADMIN' ? [{
       name: 'Team Access',
       icon: Users,
       href: '/dashboard/admin/team',
       isActive: pathname.startsWith('/dashboard/admin/team')
+    }] : []),
+    {
+      name: 'Add Course',
+      icon: PlusCircle,
+      href: '/dashboard/admin/courses/add',
+      isActive: pathname.startsWith('/dashboard/admin/courses/add')
+    },
+    {
+      name: 'Review Library',
+      icon: CheckCircle2,
+      href: '/dashboard/admin/courses/review',
+      isActive: pathname.startsWith('/dashboard/admin/courses/review')
+    },
+    {
+      name: 'Drafts',
+      icon: FileText,
+      href: '/dashboard/admin/drafts',
+      isActive: pathname.startsWith('/dashboard/admin/drafts')
     },
     {
       name: 'Settings',

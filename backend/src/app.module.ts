@@ -12,6 +12,7 @@ import { MailModule } from './infrastructure/mail/mail.module.js';
 import { InviteModule } from './modules/invite/invite.module.js';
 import { SeedModule } from './modules/seed/seed.module.js';
 import { UsersModule } from './modules/users/users.module.js';
+import { CoursesModule } from './modules/courses/courses.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UsersModule } from './modules/users/users.module.js';
     InviteModule,
     SeedModule,
     UsersModule,
+    CoursesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

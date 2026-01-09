@@ -69,7 +69,7 @@ const FeaturedCourses: React.FC<FeaturedCoursesProps> = ({ courses }) => {
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`pb-2 text-sm font-bold transition-colors relative whitespace-nowrap ${activeTab === tab
+                        className={`pb-2 text-sm font-bold transition-colors relative whitespace-nowrap cursor-pointer ${activeTab === tab
                             ? "text-blue-500"
                             : "text-blue-500 hover:text-blue-600"
                             }`}
