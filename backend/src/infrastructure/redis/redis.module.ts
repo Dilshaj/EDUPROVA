@@ -10,7 +10,19 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
         {
             provide: REDIS_CLIENT,
             useFactory: (configService: ConfigService) => {
-                return new Redis(configService.get<string>('REDIS_URL') || 'redis://localhost:6379');
+                const client = new Redis(configService.get<string>('REDIS_URL') || 'redis://localhost:6379', {
+                    retryStrategy: (times) => {
+                        // Retry with exponential backoff, max 3 seconds
+                        return Math.min(times * 50, 3000);
+                    }
+                });
+
+                client.on('error', (err) => {
+                    // Suppress unhandled error events to prevent crash
+                    // console.error('Redis Client Error:', err.message); 
+                });
+
+                return client;
             },
             inject: [ConfigService],
         },

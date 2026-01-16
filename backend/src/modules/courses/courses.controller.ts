@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Patch, Query } from '@nestjs/common';
 import { CoursesService } from './courses.service.js';
 import { CreateCourseDto } from './dto/create-course.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -18,8 +18,8 @@ export class CoursesController {
     }
 
     @Get()
-    async findAll() {
-        return this.coursesService.findAll();
+    async findAll(@Query() query: any) {
+        return this.coursesService.findAll(query);
     }
 
     @Get(':id')

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Menu,
   X,
@@ -17,8 +17,10 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useSearchParams, useRouter } from "next/navigation";
 import FeaturedCourses from "./components/Tech-Courses/FeaturedCourses";
 import CourseSlider from "./components/Tech-Courses/CourseSlider";
+import { handleAuthError } from "@/utils/auth-error-handler";
 
 
 // Mock Data for Categories and Subcategories
@@ -81,7 +83,7 @@ export default function CoursesPage2() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentBanner, setCurrentBanner] = useState(0);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [techCourses, setTechCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -100,17 +102,86 @@ export default function CoursesPage2() {
     setCurrentBanner((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
   };
 
+  const [autoPlay, setAutoPlay] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startX = useRef(0);
+  const currentTranslate = useRef(0);
+
   useEffect(() => {
+    if (!autoPlay || isDragging) return;
     const timer = setInterval(nextBanner, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [autoPlay, isDragging]);
+
+  const handleDragStart = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    startX.current = e.clientX;
+    // Disable transition during drag
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'none';
+      containerRef.current.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handleDragMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const diff = e.clientX - startX.current;
+    currentTranslate.current = diff;
+
+    // Apply transform visually
+    if (containerRef.current) {
+      containerRef.current.style.transform = `translateX(calc(-${currentBanner * 100}% + ${diff}px))`;
+    }
+  };
+
+  const handleDragEnd = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    if (containerRef.current) {
+      containerRef.current.releasePointerCapture(e.pointerId);
+      containerRef.current.style.transition = 'transform 500ms ease-in-out';
+      // Reset manual transform so React state takes over
+      containerRef.current.style.transform = '';
+    }
+
+    const threshold = 50; // Minimum drag distance to trigger swipe
+    if (currentTranslate.current < -threshold) {
+      nextBanner();
+    } else if (currentTranslate.current > threshold) {
+      prevBanner();
+    }
+
+    currentTranslate.current = 0;
+  };
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchCourses = async () => {
+      setLoading(true);
       try {
-        const res = await fetch('/api/courses?limit=100');
+        // Construct query string from current URL params
+        const params = new URLSearchParams(searchParams.toString());
+        // Always ensure we fetch enough items
+        if (!params.has('limit')) params.set('limit', '100');
+
+        const res = await fetch(`/api/courses?${params.toString()}`);
+
+        if (res.status === 401) {
+          await handleAuthError({ status: 401, message: 'Unauthorized' });
+          return;
+        }
+
         const data = await res.json();
+
         if (data.success) {
+          // If the backend is not yet filtering, this mapping logic still holds for now
+          // but strictly we should expect the backend to filter.
+          // For now, let's assume backend returns filtered data or we filter locally if needed.
+          // We'll keep the mapping for UI consistency as per the user's existing code style.
           const mappedCourses = data.courses.map((c: any) => {
             const numReviews = c.numReviews || Math.floor(Math.random() * 200000) + 10000;
             const formattedReviews = numReviews >= 1000
@@ -134,22 +205,45 @@ export default function CoursesPage2() {
               _id: c._id
             };
           });
-          setCourses(mappedCourses);
+          setTechCourses(mappedCourses);
         }
       } catch (error) {
         console.error("Failed to fetch courses:", error);
+        await handleAuthError(error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, []);
+  }, [searchParams]); // Re-fetch when URL params change
+
+  const handleFilterChange = (key: string, value: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`/dashboard/courses?${params.toString()}`);
+  };
 
   // Filter courses for different sections
-  const developmentCourses = courses.filter(c => c.title.toLowerCase().includes('development') || c.title.toLowerCase().includes('web') || c.title.toLowerCase().includes('coding'));
-  const recommendedCourses = courses.slice(0, 8); // Just take first 8 for now
-  const viewingCourses = courses.slice(8, 16); // Take next 8
+  const currentCategory = searchParams.get('category');
+
+  // If a category is selected, the backend already filters techCourses. 
+  // If "All Courses" (no category), we specifically look for development courses for that specific slider.
+  const categoryCourses = currentCategory
+    ? techCourses
+    : techCourses.filter(c => c.title.toLowerCase().includes('development') || c.title.toLowerCase().includes('web') || c.title.toLowerCase().includes('coding'));
+
+  // Ensure we have some courses to show, fallback to techCourses if specific filters return empty in "All Courses" mode
+  const displayCategoryCourses = categoryCourses.length > 0 ? categoryCourses : techCourses;
+
+  const recommendedCourses = techCourses.slice(0, 8);
+  const viewingCourses = techCourses.length > 8 ? techCourses.slice(8, 16) : techCourses.slice(0, 8);
+
+  const categorySectionTitle = currentCategory ? `Top courses in ${currentCategory}` : "Top courses in Development";
 
   return (
     <div className="min-h-screen bg-linear-to-t md:bg-linear-to-r from-[#e5f0ff]/50 to-[#e5f0ff]/40 font-sans">
@@ -164,30 +258,53 @@ export default function CoursesPage2() {
                   type="text"
                   placeholder="Search courses, mentors, or topics..."
                   className="w-full pl-11 pr-4 py-2.5 bg-transparent border-none focus:outline-none text-[14px] text-gray-700 placeholder:text-gray-400 font-medium"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleFilterChange('search', e.currentTarget.value);
+                    }
+                  }}
                 />
               </div>
-              <button className="px-7 py-2.5 bg-[#1E62FF] text-white text-sm font-bold rounded-lg hover:bg-blue-600 active:scale-95 transition-all shadow-sm cursor-pointer">
+              <button
+                className="px-7 py-2.5 bg-[#1E62FF] text-white text-sm font-bold rounded-lg hover:bg-blue-600 active:scale-95 transition-all shadow-sm cursor-pointer"
+                onClick={(e) => {
+                  const input = e.currentTarget.previousElementSibling?.querySelector('input');
+                  if (input) handleFilterChange('search', input.value);
+                }}
+              >
                 Search
               </button>
             </div>
 
             {/* Top Shortcut Buttons */}
             <div className="flex items-center gap-3 w-full lg:w-auto overflow-x-auto lg:overflow-visible pb-3 lg:pb-0 scrollbar-hide">
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-[#D659FF] to-[#5169FF] text-white rounded-full text-[13px] font-bold shadow-md whitespace-nowrap active:scale-95 transition-all cursor-pointer">
-                <Sparkles className="w-4 h-4 fill-white" />
+              <button
+                onClick={() => handleFilterChange('sort', 'trending')}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-bold shadow-md whitespace-nowrap active:scale-95 transition-all cursor-pointer ${searchParams.get('sort') === 'trending'
+                  ? 'bg-linear-to-r from-[#D659FF] to-[#5169FF] text-white'
+                  : 'bg-white border border-gray-100 text-[#47638d] hover:bg-gray-50'
+                  }`}
+              >
+                <Sparkles className={`w-4 h-4 ${searchParams.get('sort') === 'trending' ? 'fill-white' : 'text-[#47638d]'}`} />
                 New & Trending
               </button>
-              <button className="px-5 py-2.5 bg-white border border-gray-100 text-[#47638d] rounded-full text-[13px] font-bold hover:bg-gray-50 transition-all shadow-md whitespace-nowrap cursor-pointer">
+              <button
+                onClick={() => handleFilterChange('sort', null)}
+                className={`px-5 py-2.5 rounded-full text-[13px] font-bold shadow-md whitespace-nowrap cursor-pointer ${searchParams.get('sort') !== 'trending'
+                  ? 'bg-linear-to-r from-[#D659FF] to-[#5169FF] text-white'
+                  : 'bg-white border border-gray-100 text-[#47638d] hover:bg-gray-50'
+                  }`}
+              >
                 All Courses
               </button>
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-full text-[13px] font-bold hover:bg-gray-50 transition-all shadow-md whitespace-nowrap cursor-pointer">
+              <Link href="/dashboard/courses/my-learning" className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-full text-[13px] font-bold hover:bg-gray-50 transition-all shadow-md whitespace-nowrap cursor-pointer">
                 <GraduationCap className="w-4 h-4 text-gray-700" />
                 My Learning
-              </button>
-              <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-full text-[13px] font-bold hover:bg-gray-50 transition-all shadow-md whitespace-nowrap cursor-pointer">
+              </Link>
+              <Link href="/dashboard/courses/cart" className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-full text-[13px] font-bold hover:bg-gray-50 transition-all shadow-md whitespace-nowrap cursor-pointer">
                 <ShoppingCart className="w-4 h-4 text-gray-700" />
                 Cart
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -210,11 +327,12 @@ export default function CoursesPage2() {
               {Object.keys(CATEGORIES_DATA).map((cat) => (
                 <li
                   key={cat}
-                  className={`whitespace-nowrap cursor-pointer transition-all hover:text-[#1E62FF] border-b-2 py-1 ${activeCategory === cat
+                  className={`whitespace-nowrap cursor-pointer transition-all hover:text-[#1E62FF] border-b-2 py-1 ${activeCategory === cat || searchParams.get('category') === cat
                     ? 'text-[#1E62FF] border-[#1E62FF]'
                     : 'border-transparent'
                     }`}
                   onMouseEnter={() => setActiveCategory(cat)}
+                  onClick={() => handleFilterChange('category', cat)}
                 >
                   {cat}
                 </li>
@@ -227,13 +345,13 @@ export default function CoursesPage2() {
               <div className="bg-[#1E62FF] rounded-xl px-6 py-4 shadow-2xl">
                 <div className="flex items-center justify-center gap-8 overflow-x-auto scrollbar-hide">
                   {activeCategory && CATEGORIES_DATA[activeCategory]?.map((subCat) => (
-                    <Link
-                      href="#"
+                    <button
                       key={subCat}
-                      className="text-white hover:text-white/80 whitespace-nowrap text-sm font-bold transition-colors"
+                      onClick={() => handleFilterChange('category', subCat)}
+                      className="text-white hover:text-white/80 whitespace-nowrap text-sm font-bold transition-colors cursor-pointer bg-transparent border-none"
                     >
                       {subCat}
-                    </Link>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -242,30 +360,47 @@ export default function CoursesPage2() {
         </div>
 
         {/* Hero Carousel */}
-        <div className="relative w-full h-[400px] md:h-[500px] rounded-xl shadow-lg mb-12 group">
+        <div
+          className="relative w-full h-[400px] md:h-[500px] rounded-xl shadow-lg mb-12 group touch-pan-y"
+          onMouseEnter={() => setAutoPlay(false)}
+          onMouseLeave={() => setAutoPlay(true)}
+        >
           <div className="relative w-full h-[400px] md:h-[500px] overflow-hidden rounded-xl shadow-lg mb-12 group">
             <div
-              className="absolute inset-0 flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${currentBanner * 100}%)` }}
+              ref={containerRef}
+              className="absolute inset-0 flex"
+              style={{
+                transform: `translateX(-${currentBanner * 100}%)`,
+                transition: isDragging ? 'none' : 'transform 500ms ease-in-out',
+                cursor: isDragging ? 'grabbing' : 'grab'
+              }}
+              onPointerDown={handleDragStart}
+              onPointerMove={handleDragMove}
+              onPointerUp={handleDragEnd}
+              onPointerLeave={handleDragEnd}
             >
               {BANNERS.map((banner) => (
-                <div key={banner.id} className="w-full h-full shrink-0 relative">
+                <div
+                  key={banner.id}
+                  className="w-full h-full shrink-0 relative select-none"
+                  onDragStart={(e) => e.preventDefault()} // Prevent native image drag
+                >
                   {/* Background Image */}
                   <div className="absolute inset-0">
                     <Image
                       src={banner.image}
                       alt={banner.title}
                       fill
-                      className="object-cover"
+                      className="object-cover pointer-events-none" // Prevent image interaction
                       priority
                     />
                     {/* Overlay for readability */}
-                    <div className="absolute inset-0 bg-black/30" />
+                    <div className="absolute inset-0 bg-black/30 pointer-events-none" />
                   </div>
 
                   {/* Content */}
-                  <div className="relative h-full flex items-center p-8 md:p-16">
-                    <div className="max-w-xl p-6 rounded-lg">
+                  <div className="relative h-full flex items-center p-8 md:p-16 pointer-events-none">
+                    <div className="max-w-xl p-6 rounded-lg pointer-events-auto">
                       <h2 className="text-3xl md:text-5xl font-bold text-white mb-4 font-serif drop-shadow-md">{banner.title}</h2>
                       <p className="text-lg text-gray-100 mb-6 drop-shadow-sm">{banner.subtitle}</p>
                       <button className="bg-white text-gray-900 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors cursor-pointer">
@@ -326,27 +461,27 @@ export default function CoursesPage2() {
         ) : (
           <>
             {/* Featured Courses Section */}
-            <FeaturedCourses courses={courses} />
+            <FeaturedCourses courses={techCourses} />
 
             {/* Course Sections */}
             <CourseSlider
               title="What to learn next"
-              courses={recommendedCourses.length > 0 ? recommendedCourses : courses}
+              courses={recommendedCourses.length > 0 ? recommendedCourses : techCourses}
             />
 
             <CourseSlider
-              title="Top courses in Development"
-              courses={developmentCourses.length > 0 ? developmentCourses : courses}
+              title={categorySectionTitle}
+              courses={displayCategoryCourses}
             />
 
             <CourseSlider
               title="Recommended for you"
-              courses={recommendedCourses.length > 0 ? recommendedCourses : courses}
+              courses={recommendedCourses.length > 0 ? recommendedCourses : techCourses}
             />
 
             <CourseSlider
               title="Students are viewing"
-              courses={viewingCourses.length > 0 ? viewingCourses : courses}
+              courses={viewingCourses.length > 0 ? viewingCourses : techCourses}
             />
           </>
         )}

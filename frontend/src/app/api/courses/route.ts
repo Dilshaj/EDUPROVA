@@ -4,10 +4,12 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url);
         const session = await getServerSession(authOptions);
-        const response = await fetch(`${BACKEND_URL}/courses`, {
+
+        const response = await fetch(`${BACKEND_URL}/courses?${searchParams.toString()}`, {
             headers: {
                 'Authorization': `Bearer ${(session as any)?.accessToken}`
             }

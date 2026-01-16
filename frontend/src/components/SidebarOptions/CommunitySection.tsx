@@ -43,7 +43,7 @@ const CommunitySection = ({ isCollapsed, pathname, onHover }: {
             </div>
             <div className={`space-y-2 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
                 {communityItems.map((item) => {
-                    const isActive = pathname === item.path;
+                    const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
                     return (
                         <div
                             key={item.name}

@@ -5,7 +5,6 @@ import {
     Home as HomeIcon,
     BookOpen,
     User,
-    ShoppingCart,
     Settings,
 } from "lucide-react";
 import { useGSAP } from "@gsap/react";
@@ -14,7 +13,6 @@ import gsap from "gsap";
 const navItems = [
     { name: "Home", icon: HomeIcon, path: "/dashboard/home" },
     { name: "Courses", icon: BookOpen, path: "/dashboard/courses" },
-    { name: "Cart", icon: ShoppingCart, path: "/dashboard/cart" },
     { name: "Settings", icon: Settings, path: "/dashboard/settings" },
 ];
 
@@ -44,7 +42,7 @@ const SidebarNav = ({ isCollapsed, pathname, onHover }: {
     return (
         <nav className={`space-y-2 ${isCollapsed ? 'mb-4 flex flex-col items-center' : 'mb-8'}`}>
             {navItems.map((item) => {
-                const isActive = pathname === item.path;
+                const isActive = pathname === item.path || pathname.startsWith(`${item.path}/`);
                 return (
                     <div
                         key={item.name}
